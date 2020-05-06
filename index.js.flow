@@ -7,6 +7,8 @@ declare module 'react-native-swiper' {
   // eslint-disable-next-line no-undef
   declare export type SwiperProps = $ReadOnly<{|
     // Basic
+    // If true, the scroll view used will be the one from Animated component.
+    animated?: boolean,
     // If true, the scroll view's children are arranged horizontally in a row instead of vertically in a column.
     horizontal?: ?boolean,
     // If no specify default enable fullscreen mode by flex: 1.

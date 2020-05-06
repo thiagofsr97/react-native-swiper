@@ -29,6 +29,8 @@ declare module 'react-native-swiper' {
   interface SwiperProps
     extends Omit<ScrollViewProps, 'onScrollBeginDrag' | 'onMomentumScrollEnd'> {
     // Basic
+    // If true, the scroll view used will be the one from Animated component.
+    animated?: boolean
     // If true, the scroll view's children are arranged horizontally in a row instead of vertically in a column.
     horizontal?: boolean
     // If no specify default enable fullscreen mode by flex: 1.
@@ -143,4 +145,5 @@ declare module 'react-native-swiper' {
   export default class Swiper extends Component<SwiperProps, SwiperState> {
     scrollBy: (index?: number, animated?: boolean) => void
     scrollTo: (index: number, animated?: boolean) => void
+  }
 }

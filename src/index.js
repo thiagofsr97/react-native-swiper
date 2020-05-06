@@ -8,11 +8,12 @@ import {
   Text,
   View,
   ViewPropTypes,
-  ScrollView,
   Dimensions,
   TouchableOpacity,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  ScrollView as ScrollViewComponent,
+  Animated,
 } from 'react-native'
 
 /**
@@ -102,6 +103,7 @@ export default class extends Component {
    * @type {Object}
    */
   static propTypes = {
+    animated: PropTypes.bool,
     horizontal: PropTypes.bool,
     children: PropTypes.node.isRequired,
     containerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.number]),
@@ -155,6 +157,7 @@ export default class extends Component {
    * @see http://facebook.github.io/react-native/docs/scrollview.html
    */
   static defaultProps = {
+    animated: false,
     horizontal: true,
     pagingEnabled: true,
     showsHorizontalScrollIndicator: false,
@@ -175,6 +178,12 @@ export default class extends Component {
     autoplayDirection: true,
     index: 0,
     onIndexChanged: () => null
+  }
+
+  constructor(props) {
+    super(props);
+    this.ScrollView =  props.animated ? Animated.ScrollView : ScrollViewComponent;
+
   }
 
   /**
@@ -218,6 +227,9 @@ export default class extends Component {
     // If the index has changed, we notify the parent via the onIndexChanged callback
     if (this.state.index !== nextState.index)
       this.props.onIndexChanged(nextState.index)
+    if(this.props.animated !== nextProps.animated)
+      this.ScrollView = nextProps.animated ? Animated.ScrollView : ScrollViewComponent;
+
   }
 
   componentDidUpdate(prevProps) {
@@ -284,7 +296,7 @@ export default class extends Component {
     }
 
     initState.offset[initState.dir] =
-      initState.dir === 'y' ? initState.height * props.index : initState.width * props.index
+      initState.dir === 'y' ? height * props.index : width * props.index
 
     this.internals = {
       ...this.internals,
@@ -296,6 +308,11 @@ export default class extends Component {
   // include internals with state
   fullState() {
     return Object.assign({}, this.state, this.internals)
+  }
+
+  scrollViewScrollTo(options) {
+    this.props.animated ? this.scrollView.getNode().scrollTo(options) : this.scrollView.scrollTo(options);
+
   }
 
   onLayout = event => {
@@ -310,6 +327,7 @@ export default class extends Component {
       }
       offset[this.state.dir] =
         this.state.dir === 'y' ? height * setup : width * setup
+
     }
 
     // only update the offset in state if needed, updating offset while swiping
@@ -322,7 +340,7 @@ export default class extends Component {
     // contentOffset is not working in react 0.48.x so we need to use scrollTo
     // to emulate offset.
     if (this.initialRender && this.state.total > 1) {
-      this.scrollView.scrollTo({ ...offset, animated: false })
+      this.scrollViewScrollTo({ ...offset, animated: false })
       this.initialRender = false
     }
 
@@ -332,26 +350,25 @@ export default class extends Component {
   loopJump = () => {
     if (!this.state.loopJump) return
     const i = this.state.index + (this.props.loop ? 1 : 0)
-    const scrollView = this.scrollView
     this.loopJumpTimer = setTimeout(
       () => {
-        if (scrollView.setPageWithoutAnimation) {
-          scrollView.setPageWithoutAnimation(i)
+        if (this.scrollView.setPageWithoutAnimation) {
+          this.scrollView.setPageWithoutAnimation(i)
         } else {
           if (this.state.index === 0) {
-            scrollView.scrollTo(
+            this.scrollViewScrollTo(
               this.props.horizontal === false
                 ? { x: 0, y: this.state.height, animated: false }
                 : { x: this.state.width, y: 0, animated: false }
             )
           } else if (this.state.index === this.state.total - 1) {
             this.props.horizontal === false
-              ? this.scrollView.scrollTo({
+              ? this.scrollViewScrollTo({
                   x: 0,
                   y: this.state.height * this.state.total,
                   animated: false
                 })
-              : this.scrollView.scrollTo({
+              : this.scrollViewScrollTo({
                   x: this.state.width * this.state.total,
                   y: 0,
                   animated: false
@@ -361,7 +378,7 @@ export default class extends Component {
       },
       // Important Parameter
       // ViewPager 50ms, ScrollView 300ms
-      scrollView.setPageWithoutAnimation ? 50 : 300
+      this.scrollView.setPageWithoutAnimation ? 50 : 300
     )
   }
 
@@ -426,10 +443,11 @@ export default class extends Component {
     this.updateIndex(e.nativeEvent.contentOffset, this.state.dir, () => {
       this.autoplay()
       this.loopJump()
+
+      // if `onMomentumScrollEnd` registered will be called here
+      this.props.onMomentumScrollEnd &&
+        this.props.onMomentumScrollEnd(e, this.fullState(), this)
     })
-    // if `onMomentumScrollEnd` registered will be called here
-    this.props.onMomentumScrollEnd &&
-      this.props.onMomentumScrollEnd(e, this.fullState(), this)
   }
 
   /*
@@ -531,7 +549,7 @@ export default class extends Component {
     if (state.dir === 'x') x = diff * state.width
     if (state.dir === 'y') y = diff * state.height
 
-    this.scrollView && this.scrollView.scrollTo({ x, y, animated })
+    this.scrollView && this.scrollViewScrollTo({ x, y, animated })
 
     // update scroll state
     this.internals.isScrolling = true
@@ -573,7 +591,7 @@ export default class extends Component {
     if (state.dir === 'x') x = diff * state.width
     if (state.dir === 'y') y = diff * state.height
 
-    this.scrollView && this.scrollView.scrollTo({ x, y, animated })
+    this.scrollView && this.scrollViewScrollTo({ x, y, animated })
 
     // update scroll state
     this.internals.isScrolling = true
@@ -767,7 +785,7 @@ export default class extends Component {
 
   renderScrollView = pages => {
     return (
-      <ScrollView
+      <this.ScrollView
         ref={this.refScrollView}
         {...this.props}
         {...this.scrollViewPropOverrides()}
@@ -779,7 +797,7 @@ export default class extends Component {
         style={this.props.scrollViewStyle}
       >
         {pages}
-      </ScrollView>
+      </this.ScrollView>
     )
   }
 
